@@ -34,12 +34,7 @@ class JsonSerializer {
             if (value instanceof Number) {
                 json.append(value);
             } else if (value instanceof List) {
-                json.append("[");
-                ((List<?>) value).forEach(item -> json.append("\"").append(item).append("\","));
-                if (json.charAt(json.length() - 1) == ',') {
-                    json.deleteCharAt(json.length() - 1);
-                }
-                json.append("]");
+                json.append(listToJson((List<?>) value));
             } else if (value == null) {
                 json.append("null");
             } else {
@@ -57,10 +52,33 @@ class JsonSerializer {
         return json.toString();
     }
 
+    private String listToJson(List<?> list) {
+        StringBuilder jsonList = new StringBuilder("[");
+        for (Object item : list) {
+            if (item instanceof List) {
+                jsonList.append(listToJson((List<?>) item)).append(",");
+            } else if (item instanceof String) {
+                String escapedString = ((String) item).replace("\"", "\\\"");
+                jsonList.append("\"").append(escapedString).append("\",");
+            } else {
+                jsonList.append(item).append(",");
+            }
+        }
+        if (jsonList.charAt(jsonList.length() - 1) == ',') {
+            jsonList.deleteCharAt(jsonList.length() - 1);
+        }
+        jsonList.append("]");
+        return jsonList.toString();
+    }
+
+
+    // Beispielmain
     public static void main(String[] args) {
-        Mensch celine = new Mensch(32, "Celine", List.of("Lesen", "Schwimmen"));
+        // Beispielobjekt mit komplexen Datenstrukturen
+        Mensch person = new Mensch(32, "Celine", List.of("Lesen", "Schwimmen"),
+                List.of(List.of("Kochen", "Joggen"), List.of("Malen", "Yoga")));
         JsonSerializer serializer = new JsonSerializer();
-        String json = serializer.serialize(celine);
+        String json = serializer.serialize(person);
         System.out.println(json);
     }
 }
@@ -69,11 +87,13 @@ class Mensch {
     private int alter;
     private String name;
     private List<String> hobbies;
+    private List<List<String>> komplexeHobbies;
 
-    public Mensch(int alter, String name, List<String> hobbies) {
+    public Mensch(int alter, String name, List<String> hobbies, List<List<String>> komplexeHobbies) {
         this.alter = alter;
         this.name = name;
         this.hobbies = hobbies;
+        this.komplexeHobbies = komplexeHobbies;
     }
 
     public int getAlter() {
@@ -100,17 +120,25 @@ class Mensch {
         this.hobbies = hobbies;
     }
 
+    public List<List<String>> getKomplexeHobbies() {
+        return komplexeHobbies;
+    }
+
+    public void setKomplexeHobbies(List<List<String>> komplexeHobbies) {
+        this.komplexeHobbies = komplexeHobbies;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Mensch mensch = (Mensch) o;
-        return alter == mensch.alter && Objects.equals(name, mensch.name) && Objects.equals(hobbies, mensch.hobbies);
+        return alter == mensch.alter && Objects.equals(name, mensch.name) && Objects.equals(hobbies, mensch.hobbies) && Objects.equals(komplexeHobbies, mensch.komplexeHobbies);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(alter, name, hobbies);
+        return Objects.hash(alter, name, hobbies, komplexeHobbies);
     }
 
     @Override
@@ -119,6 +147,8 @@ class Mensch {
                 "alter=" + alter +
                 ", name='" + name + '\'' +
                 ", hobbies=" + hobbies +
+                ", komplexeHobbies=" + komplexeHobbies +
                 '}';
     }
+
 }

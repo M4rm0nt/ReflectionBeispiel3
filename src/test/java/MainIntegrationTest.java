@@ -16,7 +16,8 @@ class MainIntegrationTest {
         assertAll(
                 () -> assertTrue(output.contains("\"alter\":32")),
                 () -> assertTrue(output.contains("\"name\":\"Celine\"")),
-                () -> assertTrue(output.contains("\"hobbies\":[\"Lesen\",\"Schwimmen\"]"))
+                () -> assertTrue(output.contains("\"hobbies\":[\"Lesen\",\"Schwimmen\"]")),
+                () -> assertTrue(output.contains("\"komplexeHobbies\":[[\"Kochen\",\"Joggen\"],[\"Malen\",\"Yoga\"]]"))
         );
     }
 }
