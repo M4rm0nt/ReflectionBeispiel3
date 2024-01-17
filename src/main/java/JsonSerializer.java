@@ -1,82 +1,94 @@
 import java.lang.reflect.Field;
 import java.util.*;
 
-class JsonSerializer {
+public class JsonSerializer {
 
     public String serialize(Object object) {
         if (object == null) {
             return "null";
         }
 
-        Class<?> clazz = object.getClass();
-        Field[] fields = clazz.getDeclaredFields();
-        Map<String, Object> fieldMap = new TreeMap<>();
-
-        for (Field field : fields) {
-            try {
-                field.setAccessible(true);
-                Object value = field.get(object);
-                fieldMap.put(field.getName(), value);
-            } catch (IllegalAccessException e) {
-                e.printStackTrace();
-            }
+        if (object instanceof Map<?, ?>) {
+            return mapToJson((Map<?, ?>) object);
+        } else if (object instanceof List<?>) {
+            return listToJson((List<?>) object);
+        } else if (object instanceof Number || object instanceof Boolean) {
+            return object.toString();
+        } else if (object instanceof String) {
+            return "\"" + escapeString((String) object) + "\"";
+        } else {
+            return objectToJson(object);
         }
-
-        return mapToJson(fieldMap);
     }
 
-    private String mapToJson(Map<String, Object> map) {
+    private String mapToJson(Map<?, ?> map) {
         StringBuilder json = new StringBuilder("{");
-        for (Map.Entry<String, Object> entry : map.entrySet()) {
-            json.append("\"").append(entry.getKey()).append("\":");
-            Object value = entry.getValue();
-
-            if (value instanceof Number) {
-                json.append(value);
-            } else if (value instanceof List) {
-                json.append(listToJson((List<?>) value));
-            } else if (value == null) {
-                json.append("null");
-            } else {
-                json.append("\"").append(value.toString().replace("\"", "\\\"")).append("\"");
+        boolean first = true;
+        for (Map.Entry<?, ?> entry : map.entrySet()) {
+            if (!first) {
+                json.append(",");
             }
-
-            json.append(",");
+            json.append(serialize(entry.getKey().toString())).append(":");
+            json.append(serialize(entry.getValue()));
+            first = false;
         }
-
-        if (json.length() > 1) {
-            json.deleteCharAt(json.length() - 1);
-        }
-
         json.append("}");
         return json.toString();
     }
 
     private String listToJson(List<?> list) {
         StringBuilder jsonList = new StringBuilder("[");
+        boolean first = true;
         for (Object item : list) {
-            if (item instanceof List) {
-                jsonList.append(listToJson((List<?>) item)).append(",");
-            } else if (item instanceof String) {
-                String escapedString = ((String) item).replace("\"", "\\\"");
-                jsonList.append("\"").append(escapedString).append("\",");
-            } else {
-                jsonList.append(item).append(",");
+            if (!first) {
+                jsonList.append(",");
             }
-        }
-        if (jsonList.charAt(jsonList.length() - 1) == ',') {
-            jsonList.deleteCharAt(jsonList.length() - 1);
+            jsonList.append(serialize(item));
+            first = false;
         }
         jsonList.append("]");
         return jsonList.toString();
     }
 
+    private String objectToJson(Object object) {
+        Class<?> clazz = object.getClass();
+        Field[] fields = clazz.getDeclaredFields();
+        Map<String, Object> fieldMap = new TreeMap<>();
+        for (Field field : fields) {
+            try {
+                field.setAccessible(true);
+                Object value = field.get(object);
+                if (value != null) {
+                    fieldMap.put(field.getName(), value);
+                }
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException("Fehler beim Zugriff auf das Feld " + field.getName(), e);
+            }
+        }
+        return mapToJson(fieldMap);
+    }
 
-    // Beispielmain
+    private String escapeString(String string) {
+        StringBuilder escaped = new StringBuilder();
+        for (char ch : string.toCharArray()) {
+            if (ch == '\"') {
+                escaped.append("\\\"");
+            } else {
+                escaped.append(ch);
+            }
+        }
+        return escaped.toString();
+    }
+
     public static void main(String[] args) {
-        // Beispielobjekt mit komplexen Datenstrukturen
-        Mensch person = new Mensch(32, "Celine", List.of("Lesen", "Schwimmen"),
-                List.of(List.of("Kochen", "Joggen"), List.of("Malen", "Yoga")));
+        Mensch person = new Mensch(
+                32,
+                "Celine",
+                List.of("Lesen", "Schwimmen"),
+                List.of("Mila", "Chris"),
+                List.of("Max", "Moritz")
+        );
+
         JsonSerializer serializer = new JsonSerializer();
         String json = serializer.serialize(person);
         System.out.println(json);
@@ -87,13 +99,15 @@ class Mensch {
     private int alter;
     private String name;
     private List<String> hobbies;
-    private List<List<String>> komplexeHobbies;
+    private Map<String, List<String>> haustiere;
 
-    public Mensch(int alter, String name, List<String> hobbies, List<List<String>> komplexeHobbies) {
+    public Mensch(int alter, String name, List<String> hobbies, List<String> katzen, List<String> hunde) {
         this.alter = alter;
         this.name = name;
         this.hobbies = hobbies;
-        this.komplexeHobbies = komplexeHobbies;
+        this.haustiere = new HashMap<>();
+        this.haustiere.put("Katzen", katzen);
+        this.haustiere.put("Hunde", hunde);
     }
 
     public int getAlter() {
@@ -120,12 +134,12 @@ class Mensch {
         this.hobbies = hobbies;
     }
 
-    public List<List<String>> getKomplexeHobbies() {
-        return komplexeHobbies;
+    public Map<String, List<String>> getHaustiere() {
+        return haustiere;
     }
 
-    public void setKomplexeHobbies(List<List<String>> komplexeHobbies) {
-        this.komplexeHobbies = komplexeHobbies;
+    public void setHaustiere(Map<String, List<String>> haustiere) {
+        this.haustiere = haustiere;
     }
 
     @Override
@@ -133,12 +147,12 @@ class Mensch {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Mensch mensch = (Mensch) o;
-        return alter == mensch.alter && Objects.equals(name, mensch.name) && Objects.equals(hobbies, mensch.hobbies) && Objects.equals(komplexeHobbies, mensch.komplexeHobbies);
+        return alter == mensch.alter && Objects.equals(name, mensch.name) && Objects.equals(hobbies, mensch.hobbies) && Objects.equals(haustiere, mensch.haustiere);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(alter, name, hobbies, komplexeHobbies);
+        return Objects.hash(alter, name, hobbies, haustiere);
     }
 
     @Override
@@ -147,8 +161,8 @@ class Mensch {
                 "alter=" + alter +
                 ", name='" + name + '\'' +
                 ", hobbies=" + hobbies +
-                ", komplexeHobbies=" + komplexeHobbies +
+                ", haustiere=" + haustiere +
                 '}';
     }
-
 }
+
