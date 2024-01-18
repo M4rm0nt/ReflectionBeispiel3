@@ -150,7 +150,7 @@ public class JsonSerializer {
 
             Class<?> objClass = object.getClass();
             while (objClass != null && objClass != Object.class) {
-                Field[] fields = fieldsCache.computeIfAbsent(objClass, k -> k.getDeclaredFields());
+                Field[] fields = fieldsCache.computeIfAbsent(objClass, Class::getDeclaredFields);
                 for (Field field : fields) {
                     if (field.isAnnotationPresent(JsonProperty.class)) {
                         if (!firstField) {
