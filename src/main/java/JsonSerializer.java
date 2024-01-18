@@ -1,7 +1,17 @@
 import java.lang.reflect.Field;
+import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
+import org.apache.commons.lang3.StringEscapeUtils;
+
 public class JsonSerializer {
+
+    private static final DateTimeFormatter LOCAL_DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
+    private static final DateTimeFormatter LOCAL_DATE_TIME_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+    private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
 
     public String serialize(Object object) {
         if (object == null) {
@@ -15,7 +25,15 @@ public class JsonSerializer {
         } else if (object instanceof Number || object instanceof Boolean) {
             return object.toString();
         } else if (object instanceof String) {
-            return "\"" + escapeString((String) object) + "\"";
+            return String.format("\"%s\"", escapeString((String) object));
+        } else if (object instanceof Date) {
+            return String.format("\"%s\"", DATE_FORMAT.format((Date) object));
+        } else if (object instanceof LocalDate) {
+            return String.format("\"%s\"", ((LocalDate) object).format(LOCAL_DATE_FORMATTER));
+        } else if (object instanceof LocalDateTime) {
+            return String.format("\"%s\"", ((LocalDateTime) object).format(LOCAL_DATE_TIME_FORMATTER));
+        } else if (object instanceof Enum) {
+            return String.format("\"%s\"", ((Enum<?>) object).name());
         } else {
             return objectToJson(object);
         }
@@ -69,15 +87,7 @@ public class JsonSerializer {
     }
 
     private String escapeString(String string) {
-        StringBuilder escaped = new StringBuilder();
-        for (char ch : string.toCharArray()) {
-            if (ch == '\"') {
-                escaped.append("\\\"");
-            } else {
-                escaped.append(ch);
-            }
-        }
-        return escaped.toString();
+        return StringEscapeUtils.escapeJson(string);
     }
 
     public static void main(String[] args) {
@@ -165,4 +175,3 @@ class Mensch {
                 '}';
     }
 }
-
