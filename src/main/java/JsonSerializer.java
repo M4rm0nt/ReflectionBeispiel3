@@ -16,6 +16,7 @@ public class JsonSerializer {
     private static final DateTimeFormatter LOCAL_DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS");
     private static final String QUOTE_FORMAT = "\"%s\"";
     private static final String COLON = ":";
+    private static final Map<Class<?>, Field[]> fieldsCache = new HashMap<>();
 
     public String serialize(Object object) {
         return serializeInternal(object, new HashSet<>(), 0);
@@ -35,10 +36,8 @@ public class JsonSerializer {
 
         if (object instanceof Map) {
             return mapToJson((Map<?, ?>) object, visitedObjects, indentLevel);
-        } else if (object instanceof List) {
-            return listToJson((List<?>) object, visitedObjects, indentLevel);
-        } else if (object instanceof Set) {
-            return setToJson((Set<?>) object, visitedObjects, indentLevel);
+        } else if (object instanceof List || object instanceof Set) {
+            return collectionToJson((Collection<?>) object, visitedObjects, indentLevel);
         } else if (object instanceof Enum) {
             return String.format(QUOTE_FORMAT, ((Enum<?>) object).name());
         } else if (object instanceof String) {
@@ -52,27 +51,35 @@ public class JsonSerializer {
         } else {
             StringBuilder jsonObject = new StringBuilder("{\n");
             boolean firstField = true;
-            for (Field field : object.getClass().getDeclaredFields()) {
-                if (field.isAnnotationPresent(JsonProperty.class)) {
-                    if (!firstField) {
-                        jsonObject.append(",\n");
+            Class<?> objClass = object.getClass();
+
+            while (objClass != null && objClass != Object.class) {
+                Class<?> finalObjClass = objClass;
+                Field[] fields = fieldsCache.computeIfAbsent(objClass, k -> finalObjClass.getDeclaredFields());
+                for (Field field : fields) {
+                    if (field.isAnnotationPresent(JsonProperty.class)) {
+                        if (!firstField) {
+                            jsonObject.append(",\n");
+                        }
+                        field.setAccessible(true);
+                        try {
+                            jsonObject.append(innerIndent)
+                                    .append(String.format(QUOTE_FORMAT, field.getName()))
+                                    .append(COLON)
+                                    .append(" ")
+                                    .append(serializeInternal(field.get(object), visitedObjects, indentLevel + 1));
+                        } catch (IllegalAccessException e) {
+                            jsonObject.append(innerIndent)
+                                    .append(String.format(QUOTE_FORMAT, field.getName()))
+                                    .append(COLON)
+                                    .append(" \"Access Error\"");
+                        }
+                        firstField = false;
                     }
-                    field.setAccessible(true);
-                    try {
-                        jsonObject.append(innerIndent)
-                                .append(String.format(QUOTE_FORMAT, field.getName()))
-                                .append(COLON)
-                                .append(" ")
-                                .append(serializeInternal(field.get(object), visitedObjects, indentLevel + 1));
-                    } catch (IllegalAccessException e) {
-                        jsonObject.append(innerIndent)
-                                .append(String.format(QUOTE_FORMAT, field.getName()))
-                                .append(COLON)
-                                .append(" \"Access Error\"");
-                    }
-                    firstField = false;
                 }
+                objClass = objClass.getSuperclass();
             }
+
             jsonObject.append("\n").append(indent).append("}");
             return jsonObject.toString();
         }
@@ -98,48 +105,38 @@ public class JsonSerializer {
         return jsonMap.toString();
     }
 
-    private String listToJson(List<?> list, Set<Object> visitedObjects, int indentLevel) {
-        StringBuilder jsonList = new StringBuilder("[\n");
+    private String collectionToJson(Collection<?> collection, Set<Object> visitedObjects, int indentLevel) {
+        StringBuilder jsonCollection = new StringBuilder("[\n");
         String indent = " ".repeat(indentLevel * 2);
         String innerIndent = " ".repeat((indentLevel + 1) * 2);
         boolean first = true;
-        for (Object item : list) {
+        for (Object item : collection) {
             if (!first) {
-                jsonList.append(",\n");
+                jsonCollection.append(",\n");
             }
-            jsonList.append(innerIndent)
+            jsonCollection.append(innerIndent)
                     .append(serializeInternal(item, visitedObjects, indentLevel + 1));
             first = false;
         }
-        jsonList.append("\n").append(indent).append("]");
-        return jsonList.toString();
-    }
-
-    private String setToJson(Set<?> set, Set<Object> visitedObjects, int indentLevel) {
-        StringBuilder jsonSet = new StringBuilder("[\n");
-        String indent = " ".repeat(indentLevel * 2);
-        String innerIndent = " ".repeat((indentLevel + 1) * 2);
-        boolean first = true;
-        for (Object item : set) {
-            if (!first) {
-                jsonSet.append(",\n");
-            }
-            jsonSet.append(innerIndent)
-                    .append(serializeInternal(item, visitedObjects, indentLevel + 1));
-            first = false;
-        }
-        jsonSet.append("\n").append(indent).append("]");
-        return jsonSet.toString();
+        jsonCollection.append("\n").append(indent).append("]");
+        return jsonCollection.toString();
     }
 
     private String escapeString(String string) {
-        return string.replace("\"", "\\\"")
-                .replace("\\", "\\\\")
-                .replace("\b", "\\b")
-                .replace("\f", "\\f")
-                .replace("\n", "\\n")
-                .replace("\r", "\\r")
-                .replace("\t", "\\t");
+        StringBuilder escaped = new StringBuilder();
+        for (char c : string.toCharArray()) {
+            switch (c) {
+                case '\"': escaped.append("\\\""); break;
+                case '\\': escaped.append("\\\\"); break;
+                case '\b': escaped.append("\\b"); break;
+                case '\f': escaped.append("\\f"); break;
+                case '\n': escaped.append("\\n"); break;
+                case '\r': escaped.append("\\r"); break;
+                case '\t': escaped.append("\\t"); break;
+                default: escaped.append(c);
+            }
+        }
+        return escaped.toString();
     }
 
     public static void main(String[] args) {
@@ -158,7 +155,25 @@ public class JsonSerializer {
     }
 }
 
-class Mensch {
+class Lebewesen {
+    @JsonProperty
+    protected String art;
+
+    public Lebewesen(String art) {
+        this.art = art;
+    }
+
+    // Getter und Setter für art
+    public String getArt() {
+        return art;
+    }
+
+    public void setArt(String art) {
+        this.art = art;
+    }
+}
+
+class Mensch extends Lebewesen {
     @JsonProperty
     private int alter;
     @JsonProperty
@@ -173,6 +188,7 @@ class Mensch {
     private Geschlecht geschlecht;
 
     public Mensch(int alter, String name, LocalDateTime geburtstag, List<String> hobbies, Map<String, List<String>> haustiere, Geschlecht geschlecht) {
+        super("Homo sapiens");
         this.alter = alter;
         this.name = name;
         this.geburtstag = geburtstag;
