@@ -23,9 +23,6 @@ public class JsonSerializer {
     }
 
     private String serializeInternal(Object object, Set<Object> visitedObjects, int indentLevel) {
-        String indent = " ".repeat(indentLevel * 2);
-        String innerIndent = " ".repeat((indentLevel + 1) * 2);
-
         if (object == null) {
             return "null";
         }
@@ -34,28 +31,126 @@ public class JsonSerializer {
         }
         visitedObjects.add(object);
 
-        if (object instanceof Map) {
-            return mapToJson((Map<?, ?>) object, visitedObjects, indentLevel);
-        } else if (object instanceof List || object instanceof Set) {
-            return collectionToJson((Collection<?>) object, visitedObjects, indentLevel);
-        } else if (object instanceof Enum) {
-            return String.format(QUOTE_FORMAT, ((Enum<?>) object).name());
-        } else if (object instanceof String) {
-            return String.format(QUOTE_FORMAT, escapeString((String) object));
-        } else if (object instanceof LocalDate) {
-            return String.format(QUOTE_FORMAT, ((LocalDate) object).format(LOCAL_DATE_FORMATTER));
-        } else if (object instanceof LocalDateTime) {
-            return String.format(QUOTE_FORMAT, ((LocalDateTime) object).format(LOCAL_DATE_TIME_FORMATTER));
-        } else if (object instanceof Number || object instanceof Boolean) {
+        JsonSerializerFactory factory = new JsonSerializerFactory();
+        return factory.getSerializer(object).serialize(object, visitedObjects, indentLevel);
+    }
+
+    private abstract class DataSerializer {
+        abstract String serialize(Object object, Set<Object> visitedObjects, int indentLevel);
+    }
+
+    private class JsonSerializerFactory {
+        DataSerializer getSerializer(Object object) {
+            if (object instanceof Map) {
+                return new MapSerializer();
+            } else if (object instanceof Collection) {
+                return new CollectionSerializer();
+            } else if (object instanceof Enum) {
+                return new EnumSerializer();
+            } else if (object instanceof String) {
+                return new StringSerializer();
+            } else if (object instanceof LocalDate || object instanceof LocalDateTime) {
+                return new DateSerializer();
+            } else if (object instanceof Number || object instanceof Boolean) {
+                return new PrimitiveSerializer();
+            } else {
+                return new ObjectSerializer();
+            }
+        }
+    }
+
+    private class MapSerializer extends DataSerializer {
+        @Override
+        String serialize(Object object, Set<Object> visitedObjects, int indentLevel) {
+            StringBuilder jsonMap = new StringBuilder("{\n");
+            String indent = " ".repeat(indentLevel * 2);
+            String innerIndent = " ".repeat((indentLevel + 1) * 2);
+            boolean first = true;
+            Map<?, ?> map = (Map<?, ?>) object;
+            for (Map.Entry<?, ?> entry : map.entrySet()) {
+                if (!first) {
+                    jsonMap.append(",\n");
+                }
+                jsonMap.append(innerIndent)
+                        .append(serializeInternal(entry.getKey(), visitedObjects, indentLevel + 1))
+                        .append(COLON)
+                        .append(" ")
+                        .append(serializeInternal(entry.getValue(), visitedObjects, indentLevel + 1));
+                first = false;
+            }
+            jsonMap.append("\n").append(indent).append("}");
+            return jsonMap.toString();
+        }
+    }
+
+    private class CollectionSerializer extends DataSerializer {
+        @Override
+        String serialize(Object object, Set<Object> visitedObjects, int indentLevel) {
+            StringBuilder jsonCollection = new StringBuilder("[\n");
+            String indent = " ".repeat(indentLevel * 2);
+            String innerIndent = " ".repeat((indentLevel + 1) * 2);
+            boolean first = true;
+            Collection<?> collection = (Collection<?>) object;
+            for (Object item : collection) {
+                if (!first) {
+                    jsonCollection.append(",\n");
+                }
+                jsonCollection.append(innerIndent)
+                        .append(serializeInternal(item, visitedObjects, indentLevel + 1));
+                first = false;
+            }
+            jsonCollection.append("\n").append(indent).append("]");
+            return jsonCollection.toString();
+        }
+    }
+
+    private class EnumSerializer extends DataSerializer {
+        @Override
+        String serialize(Object object, Set<Object> visitedObjects, int indentLevel) {
+            Enum<?> enumValue = (Enum<?>) object;
+            return String.format(QUOTE_FORMAT, enumValue.name());
+        }
+    }
+
+    private class StringSerializer extends DataSerializer {
+        @Override
+        String serialize(Object object, Set<Object> visitedObjects, int indentLevel) {
+            String str = (String) object;
+            return String.format(QUOTE_FORMAT, escapeString(str));
+        }
+    }
+
+    private class DateSerializer extends DataSerializer {
+        @Override
+        String serialize(Object object, Set<Object> visitedObjects, int indentLevel) {
+            if (object instanceof LocalDate) {
+                LocalDate date = (LocalDate) object;
+                return String.format(QUOTE_FORMAT, date.format(LOCAL_DATE_FORMATTER));
+            } else {
+                LocalDateTime dateTime = (LocalDateTime) object;
+                return String.format(QUOTE_FORMAT, dateTime.format(LOCAL_DATE_TIME_FORMATTER));
+            }
+        }
+    }
+
+    private class PrimitiveSerializer extends DataSerializer {
+        @Override
+        String serialize(Object object, Set<Object> visitedObjects, int indentLevel) {
             return object.toString();
-        } else {
+        }
+    }
+
+    private class ObjectSerializer extends DataSerializer {
+        @Override
+        String serialize(Object object, Set<Object> visitedObjects, int indentLevel) {
             StringBuilder jsonObject = new StringBuilder("{\n");
             boolean firstField = true;
-            Class<?> objClass = object.getClass();
+            String indent = " ".repeat(indentLevel * 2);
+            String innerIndent = " ".repeat((indentLevel + 1) * 2);
 
+            Class<?> objClass = object.getClass();
             while (objClass != null && objClass != Object.class) {
-                Class<?> finalObjClass = objClass;
-                Field[] fields = fieldsCache.computeIfAbsent(objClass, k -> finalObjClass.getDeclaredFields());
+                Field[] fields = fieldsCache.computeIfAbsent(objClass, k -> k.getDeclaredFields());
                 for (Field field : fields) {
                     if (field.isAnnotationPresent(JsonProperty.class)) {
                         if (!firstField) {
@@ -83,43 +178,6 @@ public class JsonSerializer {
             jsonObject.append("\n").append(indent).append("}");
             return jsonObject.toString();
         }
-    }
-
-    private String mapToJson(Map<?, ?> map, Set<Object> visitedObjects, int indentLevel) {
-        StringBuilder jsonMap = new StringBuilder("{\n");
-        String indent = " ".repeat(indentLevel * 2);
-        String innerIndent = " ".repeat((indentLevel + 1) * 2);
-        boolean first = true;
-        for (Map.Entry<?, ?> entry : map.entrySet()) {
-            if (!first) {
-                jsonMap.append(",\n");
-            }
-            jsonMap.append(innerIndent)
-                    .append(serializeInternal(entry.getKey(), visitedObjects, indentLevel + 1))
-                    .append(COLON)
-                    .append(" ")
-                    .append(serializeInternal(entry.getValue(), visitedObjects, indentLevel + 1));
-            first = false;
-        }
-        jsonMap.append("\n").append(indent).append("}");
-        return jsonMap.toString();
-    }
-
-    private String collectionToJson(Collection<?> collection, Set<Object> visitedObjects, int indentLevel) {
-        StringBuilder jsonCollection = new StringBuilder("[\n");
-        String indent = " ".repeat(indentLevel * 2);
-        String innerIndent = " ".repeat((indentLevel + 1) * 2);
-        boolean first = true;
-        for (Object item : collection) {
-            if (!first) {
-                jsonCollection.append(",\n");
-            }
-            jsonCollection.append(innerIndent)
-                    .append(serializeInternal(item, visitedObjects, indentLevel + 1));
-            first = false;
-        }
-        jsonCollection.append("\n").append(indent).append("]");
-        return jsonCollection.toString();
     }
 
     private String escapeString(String string) {
@@ -163,7 +221,6 @@ class Lebewesen {
         this.art = art;
     }
 
-    // Getter und Setter für art
     public String getArt() {
         return art;
     }
