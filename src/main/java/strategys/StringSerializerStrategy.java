@@ -10,7 +10,7 @@ import java.util.Map;
 public class StringSerializerStrategy implements SerializerStrategy {
     @Override
     public boolean isApplicable(Object object) {
-        return object instanceof Map;
+        return object instanceof String;
     }
 
     @Override

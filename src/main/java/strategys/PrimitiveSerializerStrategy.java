@@ -9,7 +9,7 @@ import java.util.Map;
 public class PrimitiveSerializerStrategy implements SerializerStrategy {
     @Override
     public boolean isApplicable(Object object) {
-        return object instanceof Map;
+        return object instanceof Number;
     }
 
     @Override

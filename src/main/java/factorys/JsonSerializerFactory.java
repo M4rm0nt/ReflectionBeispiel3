@@ -20,7 +20,6 @@ public class JsonSerializerFactory {
         strategies.add(new DateSerializerStrategy());
         strategies.add(new PrimitiveSerializerStrategy());
         strategies.add(new ObjectSerializerStrategy());
-
     }
 
     public DataSerializer getSerializer(Object object) {

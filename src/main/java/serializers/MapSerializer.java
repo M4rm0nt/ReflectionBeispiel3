@@ -7,7 +7,7 @@ import java.util.Set;
 
 public class MapSerializer extends DataSerializer {
     @Override
-    String serialize(Object object, Set<Object> visitedObjects, int indentLevel) {
+    public String serialize(Object object, Set<Object> visitedObjects, int indentLevel) {
         StringBuilder jsonMap = new StringBuilder("{\n");
         String indent = " ".repeat(indentLevel * 2);
         String innerIndent = " ".repeat((indentLevel + 1) * 2);

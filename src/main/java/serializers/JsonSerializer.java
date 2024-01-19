@@ -1,6 +1,7 @@
 package serializers;
 
 import factorys.JsonSerializerFactory;
+import serializers.DataSerializer;
 
 import java.lang.reflect.Field;
 import java.util.*;

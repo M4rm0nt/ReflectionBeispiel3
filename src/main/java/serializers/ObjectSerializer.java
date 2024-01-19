@@ -8,7 +8,7 @@ import java.util.Set;
 
 public class ObjectSerializer extends DataSerializer {
     @Override
-    String serialize(Object object, Set<Object> visitedObjects, int indentLevel) {
+    public String serialize(Object object, Set<Object> visitedObjects, int indentLevel) {
         StringBuilder jsonObject = new StringBuilder("{\n");
         boolean firstField = true;
         String indent = " ".repeat(indentLevel * 2);
