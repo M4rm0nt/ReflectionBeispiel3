@@ -1,0 +1,10 @@
+# Ignoriere das target Verzeichnis
+/target/
+
+# Ignoriere IDE spezifische Dateien
+/.idea/
+*.iml
+
+# Ignoriere Betriebssystem spezifische Dateien
+.DS_Store
+Thumbs.db
