@@ -16,6 +16,21 @@ public class JsonSerializer {
         return serializeInternal(object, new HashSet<>(), 0);
     }
 
+    public String serializeList(List<?> objects) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("[");
+
+        for (int i = 0; i < objects.size(); i++) {
+            sb.append(serialize(objects.get(i)));
+            if (i < objects.size() - 1) {
+                sb.append(",");
+            }
+        }
+
+        sb.append("]");
+        return sb.toString();
+    }
+
     public static String serializeInternal(Object object, Set<Object> visitedObjects, int indentLevel) {
         if (object == null) {
             return "null";
