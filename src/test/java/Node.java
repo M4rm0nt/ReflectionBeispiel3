@@ -1,3 +1,5 @@
+import interfaces.JsonProperty;
+
 import java.util.Objects;
 
 public class Node {
