@@ -1,8 +1,7 @@
 package factorys;
 
 import interfaces.SerializerStrategy;
-import serializers.DataSerializer;
-import serializers.ObjectSerializer;
+import serializers.*;
 import strategys.*;
 
 import java.util.ArrayList;
@@ -13,12 +12,12 @@ public class JsonSerializerFactory {
 
     public JsonSerializerFactory() {
         strategies = new ArrayList<>();
-        strategies.add(new MapSerializerStrategy());
-        strategies.add(new CollectionSerializerStrategy());
-        strategies.add(new EnumSerializerStrategy());
         strategies.add(new StringSerializerStrategy());
         strategies.add(new DateSerializerStrategy());
+        strategies.add(new EnumSerializerStrategy());
         strategies.add(new PrimitiveSerializerStrategy());
+        strategies.add(new CollectionSerializerStrategy());
+        strategies.add(new MapSerializerStrategy());
         strategies.add(new ObjectSerializerStrategy());
     }
 

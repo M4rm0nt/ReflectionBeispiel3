@@ -16,17 +16,20 @@ public class Mensch extends Lebewesen {
     @JsonProperty
     private LocalDateTime geburtstag;
     @JsonProperty
+    private LocalDateTime heuteTag;
+    @JsonProperty
     private List<String> hobbies;
     @JsonProperty
     private Map<String, List<String>> haustiere;
     @JsonProperty
     private Geschlecht geschlecht;
 
-    public Mensch(int alter, String name, LocalDateTime geburtstag, List<String> hobbies, Map<String, List<String>> haustiere, Geschlecht geschlecht) {
+    public Mensch(int alter, String name, LocalDateTime geburtstag, LocalDateTime heuteTag, List<String> hobbies, Map<String, List<String>> haustiere, Geschlecht geschlecht) {
         super("Homo sapiens");
         this.alter = alter;
         this.name = name;
         this.geburtstag = geburtstag;
+        this.heuteTag = heuteTag;
         this.hobbies = hobbies;
         this.haustiere = haustiere;
         this.geschlecht = geschlecht;
@@ -54,6 +57,14 @@ public class Mensch extends Lebewesen {
 
     public void setGeburtstag(LocalDateTime geburtstag) {
         this.geburtstag = geburtstag;
+    }
+
+    public LocalDateTime getHeuteTag() {
+        return heuteTag;
+    }
+
+    public void setHeuteTag(LocalDateTime heuteTag) {
+        this.heuteTag = heuteTag;
     }
 
     public List<String> getHobbies() {
@@ -85,24 +96,25 @@ public class Mensch extends Lebewesen {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Mensch mensch = (Mensch) o;
-        return alter == mensch.alter && Objects.equals(name, mensch.name) && Objects.equals(geburtstag, mensch.geburtstag) && Objects.equals(hobbies, mensch.hobbies) && Objects.equals(haustiere, mensch.haustiere) && geschlecht == mensch.geschlecht;
+        return alter == mensch.alter && Objects.equals(name, mensch.name) && Objects.equals(geburtstag, mensch.geburtstag) && Objects.equals(heuteTag, mensch.heuteTag) && Objects.equals(hobbies, mensch.hobbies) && Objects.equals(haustiere, mensch.haustiere) && geschlecht == mensch.geschlecht;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(alter, name, geburtstag, hobbies, haustiere, geschlecht);
+        return Objects.hash(alter, name, geburtstag, heuteTag, hobbies, haustiere, geschlecht);
     }
 
     @Override
     public String toString() {
-        return "model.Mensch{" +
+        return "Mensch{" +
                 "alter=" + alter +
                 ", name='" + name + '\'' +
                 ", geburtstag=" + geburtstag +
+                ", heuteTag=" + heuteTag +
                 ", hobbies=" + hobbies +
                 ", haustiere=" + haustiere +
                 ", geschlecht=" + geschlecht +
+                ", art='" + art + '\'' +
                 '}';
     }
-
 }

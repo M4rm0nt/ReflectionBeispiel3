@@ -13,6 +13,7 @@ public class Main {
                 33,
                 "Celine",
                 LocalDateTime.of(1990, 5, 15, 0, 0),
+                LocalDateTime.now(),
                 List.of("Lesen", "Schwimmen"),
                 Map.of("Katzen", List.of("Mila", "Chris"), "Hunde", List.of("Max", "Moritz")),
                 Geschlecht.WEIBLICH
