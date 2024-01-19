@@ -1,5 +1,5 @@
 import enums.Geschlecht;
-import model.Mensch;
+import models.Mensch;
 import serializers.JsonSerializer;
 
 import java.time.LocalDateTime;

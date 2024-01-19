@@ -1,4 +1,4 @@
-package model;
+package models;
 
 import enums.Geschlecht;
 import interfaces.JsonProperty;

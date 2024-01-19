@@ -1,5 +1,5 @@
 import enums.Geschlecht;
-import model.Mensch;
+import models.Mensch;
 import org.junit.jupiter.api.Test;
 import serializers.JsonSerializer;
 
